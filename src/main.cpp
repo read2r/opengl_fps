@@ -10,6 +10,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "shader.h"
+
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window);
 
@@ -33,6 +35,8 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    Shader mShader("shader/shader.vs", "shader/shader.fs");
+
     while(!glfwWindowShouldClose(window)) {
         processInput(window);
 
@@ -42,7 +46,7 @@ int main(int argc, char **argv) {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-    
+
     glfwTerminate();
     return 0;
 }
