@@ -11,9 +11,19 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "shader.h"
+#include "camera.h"
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void processInput(GLFWwindow *window);
+
+Camera mCamera;
+float lastX;
+float lastY;
+bool firstMouse = true;
+
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
 
 int main(int argc, char **argv) {
     glfwInit();
@@ -28,12 +38,16 @@ int main(int argc, char **argv) {
         return -1;
     }
     glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to inititialize GLAD" << std::endl;
         return -1;
     }
+
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glEnable(GL_DEPTH_TEST);
 
     Shader mShader("shader/shader.vs", "shader/shader.fs");
     
@@ -96,10 +110,27 @@ int main(int argc, char **argv) {
     glBindVertexArray(0);
 
     while(!glfwWindowShouldClose(window)) {
+        if(lastFrame == 0) {
+            lastFrame = glfwGetTime();
+        } else {
+            float currentFrame = glfwGetTime();
+            deltaTime = currentFrame - lastFrame;
+            lastFrame = currentFrame;
+        }
+
         processInput(window);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glm::mat4 model = glm::mat4(1.0f);
+        glm::mat4 view = mCamera.getViewMatrix();
+        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        glm::mat4 projection = glm::perspective(glm::radians(mCamera.zoom), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
+
+        mShader.setMat4("model", model);
+        mShader.setMat4("view", view);
+        mShader.setMat4("projection", projection);
 
         mShader.use();
         glBindVertexArray(VAO);
@@ -118,6 +149,33 @@ void processInput(GLFWwindow *window) {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
     }
+    if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        mCamera.processKeyboard(FORWARD, deltaTime);
+    } 
+    if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        mCamera.processKeyboard(BACKWARD, deltaTime);
+    } 
+    if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        mCamera.processKeyboard(LEFT, deltaTime);
+    } 
+    if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        mCamera.processKeyboard(RIGHT, deltaTime);
+    } 
+}
+
+void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
+    if(firstMouse) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+    
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos;
+    lastX = xpos;
+    lastY = ypos;
+
+    mCamera.processMouseMovement(xoffset, yoffset);
 }
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
